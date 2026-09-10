@@ -1,0 +1,56 @@
+# BÀI 3: TĂNG CƯỜNG BẢO MẬT SSH
+# Thay <IP_VPS> bằng địa chỉ IP VPS của bạn.
+# Không tải private key lên GitHub.
+
+# 1. TẠO VÀ GỬI SSH KEY - CHẠY TRÊN MÁY CÁ NHÂN
+
+# Tạo cặp khóa SSH riêng cho user deploy
+ssh-keygen -t ed25519 -f ~/.ssh/azvps_deploy_ed25519 -C "deploy@azvps"
+
+# Gửi public key lên tài khoản deploy trên VPS
+ssh-copy-id -i ~/.ssh/azvps_deploy_ed25519.pub deploy@<IP_VPS>
+
+# Đăng nhập thử bằng private key
+ssh -i ~/.ssh/azvps_deploy_ed25519 deploy@<IP_VPS>
+
+
+# 2. CẤU HÌNH BẢO MẬT - CHẠY TRÊN VPS BẰNG USER DEPLOY
+
+# Tạo file cấu hình: cấm root, tắt mật khẩu và bật public key
+sudo tee /etc/ssh/sshd_config.d/00-hardening.conf > /dev/null <<'EOF'
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+EOF
+
+# Kiểm tra cú pháp cấu hình SSH; không có thông báo là hợp lệ
+sudo sshd -t
+
+# Kiểm tra các giá trị cấu hình đang có hiệu lực
+sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|kbdinteractiveauthentication|pubkeyauthentication'
+
+# Áp dụng cấu hình mà không dừng dịch vụ SSH
+sudo systemctl reload ssh
+
+# Kiểm tra dịch vụ SSH vẫn hoạt động
+sudo systemctl status ssh --no-pager
+
+
+# 3. KIỂM TRA - MỞ TERMINAL MỚI TRÊN MÁY CÁ NHÂN
+# Giữ nguyên phiên SSH cũ cho đến khi đăng nhập mới thành công.
+
+# Xác nhận user deploy vẫn đăng nhập được bằng SSH key
+ssh -i ~/.ssh/azvps_deploy_ed25519 deploy@<IP_VPS>
+
+# Xác nhận tài khoản đang sử dụng là deploy
+whoami
+
+# Thoát khỏi phiên deploy để trở về máy cá nhân
+exit
+
+# Thử đăng nhập root; kết quả mong muốn là Permission denied (publickey)
+ssh root@<IP_VPS>
+
+# Thử đăng nhập deploy chỉ bằng mật khẩu; kết quả mong muốn là Permission denied
+ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no deploy@<IP_VPS>
