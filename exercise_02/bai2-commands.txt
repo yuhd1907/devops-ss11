@@ -1,0 +1,64 @@
+# 1. TẠO USER VÀ CẤP QUYỀN
+
+# Tạo tài khoản mới có tên deploy
+adduser deploy
+
+# Thêm user deploy vào nhóm sudo để có quyền quản trị
+usermod -aG sudo deploy
+
+# Chuyển từ tài khoản root sang tài khoản deploy
+su - deploy
+
+
+# 2. CÀI ĐẶT DOCKER ENGINE VÀ DOCKER COMPOSE
+
+# Cập nhật danh sách package của Ubuntu
+sudo apt-get update
+
+# Cài chứng chỉ CA và curl để tải dữ liệu qua HTTPS
+sudo apt-get install -y ca-certificates curl
+
+# Tạo thư mục lưu khóa xác thực của repository
+sudo install -m 0755 -d /etc/apt/keyrings
+
+# Tải khóa GPG chính thức của Docker
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+
+# Cấp quyền đọc khóa Docker cho các user
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Thêm repository chính thức của Docker vào Ubuntu
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Cập nhật lại danh sách package sau khi thêm Docker repository
+sudo apt-get update
+
+# Cài Docker Engine, Docker CLI, containerd, Buildx và Compose plugin
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Khởi động Docker và thiết lập tự khởi động cùng hệ thống
+sudo systemctl enable --now docker
+
+
+# 3. PHÂN QUYỀN VÀ KIỂM TRA
+
+# Thêm user deploy vào nhóm docker để chạy Docker không cần sudo
+sudo usermod -aG docker deploy
+
+# Nạp quyền của nhóm docker vào phiên Terminal hiện tại
+newgrp docker
+
+# Kiểm tra user hiện tại
+whoami
+
+# Kiểm tra các nhóm mà user deploy đang tham gia
+groups
+
+# Kiểm tra phiên bản Docker Engine
+docker --version
+
+# Kiểm tra phiên bản Docker Compose
+docker compose version
+
+# Chạy container mẫu để xác nhận Docker hoạt động thành công
+docker run --rm hello-world
